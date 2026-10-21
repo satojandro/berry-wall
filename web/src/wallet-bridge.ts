@@ -1,6 +1,8 @@
 // Shared wallet instance bridge so sign.ts and wallet.ts use the same session.
-// near-connect SDK: signIn() resolves to Account[]; getAccounts() is the
-// post-popup fallback for bridges that resolve before the popup completes.
+// near-connect: the correct entry point is connector.connect() — it opens the
+// wallet-selection popup, persists the chosen wallet, and runs signIn internally.
+// (Calling connector.wallet() before any wallet is selected throws
+// "No accounts found" — that was the sign-in bug.)
 import { NearConnector } from "@hot-labs/near-connect";
 
 export type Network = "mainnet" | "testnet";
@@ -11,7 +13,6 @@ export interface WalletAccount {
 }
 
 interface WalletLike {
-  signIn(data?: unknown): Promise<unknown>;
   getAccounts(): Promise<WalletAccount[]>;
   signAndSendTransactions(t: unknown): Promise<unknown>;
   signOut(): Promise<void>;
@@ -26,42 +27,33 @@ export function initConnector(network: Network) {
 
 export async function signIn(): Promise<string> {
   if (!connector) throw new Error("connector not initialized");
-  if (!wallet) wallet = (await connector.wallet()) as unknown as WalletLike;
 
-  const res = await wallet.signIn();
-  const accounts = normalizeAccounts(res);
-  if (accounts.length > 0) return accounts[0].accountId;
+  // connect({}) opens the wallet picker popup if none is selected, then signs in.
+  const accounts = (await (connector as unknown as {
+    connect(input?: object): Promise<WalletAccount[]>;
+  }).connect({})) as WalletAccount[];
 
-  // Popup flow may complete after signIn resolves; poll briefly.
-  for (let i = 0; i < 60; i++) {
-    await new Promise((r) => setTimeout(r, 1000));
-    try {
-      const accs = await wallet.getAccounts();
-      if (accs && accs.length > 0) return accs[0].accountId;
-    } catch {
-      // keep polling until timeout
-    }
+  if (!accounts || accounts.length === 0) {
+    throw new Error("wallet returned no accounts");
   }
-  throw new Error("no account returned by wallet (did you complete the popup?)");
+
+  wallet = (await connector.wallet()) as unknown as WalletLike;
+  return accounts[0].accountId;
 }
 
 export async function signOut(): Promise<void> {
-  if (!wallet) return;
-  await wallet.signOut();
-  wallet = null;
+  if (!connector) return;
+  try {
+    await (connector as unknown as { disconnect(wallet?: unknown): Promise<void> }).disconnect();
+  } finally {
+    wallet = null;
+  }
 }
 
 export async function getWallet(): Promise<WalletLike> {
-  if (!wallet) throw new Error("not signed in");
-  return wallet;
-}
-
-function normalizeAccounts(res: unknown): WalletAccount[] {
-  if (Array.isArray(res)) return res as WalletAccount[];
-  if (res && typeof res === "object") {
-    const r = res as { accounts?: WalletAccount[]; accountId?: string };
-    if (Array.isArray(r.accounts)) return r.accounts;
-    if (typeof r.accountId === "string") return [{ accountId: r.accountId }];
+  if (!wallet) {
+    if (!connector) throw new Error("connector not initialized");
+    wallet = (await connector.wallet()) as unknown as WalletLike;
   }
-  return [];
+  return wallet;
 }
