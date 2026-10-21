@@ -28,17 +28,24 @@ export function initConnector(network: Network) {
 export async function signIn(): Promise<string> {
   if (!connector) throw new Error("connector not initialized");
 
-  // connect({}) opens the wallet picker popup if none is selected, then signs in.
-  const accounts = (await (connector as unknown as {
-    connect(input?: object): Promise<WalletAccount[]>;
-  }).connect({})) as WalletAccount[];
+  // connect() opens the wallet picker (if needed), signs in, and returns
+  // the WALLET OBJECT — the accounts arrive via wallet.getAccounts()
+  // (and the "wallet:signIn" event).
+  const w = (await (connector as unknown as {
+    connect(input?: object): Promise<unknown>;
+  }).connect({})) as WalletLike;
+  wallet = w;
 
-  if (!accounts || accounts.length === 0) {
-    throw new Error("wallet returned no accounts");
+  for (let i = 0; i < 30; i++) {
+    try {
+      const accs = await w.getAccounts();
+      if (accs && accs.length > 0) return accs[0].accountId;
+    } catch {
+      // account list may not be populated immediately after the popup
+    }
+    await new Promise((r) => setTimeout(r, 500));
   }
-
-  wallet = (await connector.wallet()) as unknown as WalletLike;
-  return accounts[0].accountId;
+  throw new Error("signed in but no account was returned");
 }
 
 export async function signOut(): Promise<void> {
