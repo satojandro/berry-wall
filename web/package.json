@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "@hot-labs/near-connect": "^0.11.4",
+    "@near-js/accounts": "^2.5.1",
+    "@near-js/crypto": "^2.5.1",
+    "@near-js/providers": "^2.5.1",
+    "@near-js/transactions": "^2.5.1",
+    "@near-js/types": "^2.5.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vitest": "^3.2.4"
+  },
+  "name": "mpoov2-web",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "preview": "vite preview"
+  }
+}

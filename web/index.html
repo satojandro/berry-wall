@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Berry Wall — paint together, farm together</title>
+</head>
+<body>
+  <header>
+    <h1>BERRY <span>WALL</span></h1>
+    <div id="status">loading…</div>
+    <div id="account"></div>
+    <button id="login">Sign in</button>
+  </header>
+  <main>
+    <canvas id="board"></canvas>
+    <div id="zoom-controls">
+      <button id="zoom-in" aria-label="zoom in">+</button>
+      <button id="zoom-out" aria-label="zoom out">−</button>
+      <button id="fit" aria-label="fit view">⤢</button>
+    </div>
+  </main>
+  <footer id="palette"></footer>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

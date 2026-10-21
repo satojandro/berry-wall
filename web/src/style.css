@@ -1,0 +1,110 @@
+:root {
+  --bg: #0e0f13;
+  --panel: #171923;
+  --text: #e6e8ee;
+  --muted: #8b91a3;
+  --accent: #ff4500;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid #232633;
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+header h1 span { color: var(--accent); }
+
+#status {
+  color: var(--muted);
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#account { color: var(--muted); font-size: 12px; }
+
+button {
+  background: #232633;
+  color: var(--text);
+  border: 1px solid #2e3244;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover { background: #2b2f40; }
+
+main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#board {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#zoom-controls button { width: 40px; height: 40px; font-size: 18px; }
+
+footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-top: 1px solid #232633;
+  overflow-x: auto;
+}
+
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  flex: none;
+}
+.swatch.active {
+  border-color: var(--text);
+  outline: 2px solid var(--accent);
+}
+
+@media (max-width: 640px) {
+  .swatch { width: 38px; height: 38px; }
+  header h1 { display: none; }
+}
