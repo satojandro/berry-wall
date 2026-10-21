@@ -33,7 +33,7 @@ let syncing = false;
 // ---- RPC caller ----
 async function makeCaller(): Promise<ViewCaller> {
   const { JsonRpcProvider } = await import("@near-js/providers");
-  const provider = new JsonRpcProvider({ url: RPC_URL ?? `https://rpc.${NETWORK}.near.org` });
+  const provider = new JsonRpcProvider({ url: RPC_URL ?? `https://test.rpc.fastnear.com` });
   return {
     async view({ methodName, args }) {
       const res = (await provider.query({
@@ -54,22 +54,40 @@ async function boot() {
   setStatus(CONTRACT_ID ? "connecting…" : "demo mode (no contract configured)");
   if (CONTRACT_ID) {
     client = new BoardClient(CONTRACT_ID, await makeCaller());
-    const meta = await client.getBoard();
-    state.applyMeta(meta);
-    state.initChunkVersions(Math.ceil(meta.size / meta.chunk) ** 2);
+    // RPC failures (rate limits, network) must not brick the page at "connecting…".
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        const meta = await client.getBoard();
+        state.applyMeta(meta);
+        state.initChunkVersions(Math.ceil(meta.size / meta.chunk) ** 2);
+        break;
+      } catch (e) {
+        if (attempt === 5) {
+          setStatus(`RPC error: ${String(e).slice(0, 60)} — retrying in background`);
+          void demoFallback();
+          return;
+        }
+        setStatus(`connecting… retry ${attempt}/5`);
+        await sleep(2000 * attempt);
+      }
+    }
     await fullLoad();
     void syncLoop();
   } else {
-    // Demo mode: checkerboard so interaction can be tested without RPC.
-    state.applyMeta({ epoch: 0, size: 64, palette_len: 16, chunk: 64, open_wall: true, created_at_ns: "0", total_pixels_drawn: 0, total_paint_burned: "0" });
-    state.initChunkVersions(1);
-    for (let y = 8; y < 24; y++) for (let x = 8; x < 40; x++) {
-      if ((x + y) % 3 === 0) state.cells.set(BoardState.key(x, y), (x * 7 + y * 13) % 16);
-    }
+    await demoFallback();
   }
   renderer.fitView(state.meta!.size);
   buildPalette();
   setStatus(CONTRACT_ID ? "live" : "demo mode (paint not persisted)");
+}
+
+async function demoFallback() {
+  // Demo mode: checkerboard so interaction can be tested without RPC.
+  state.applyMeta({ epoch: 0, size: 64, palette_len: 16, chunk: 64, open_wall: true, created_at_ns: "0", total_pixels_drawn: 0, total_paint_burned: "0" });
+  state.initChunkVersions(1);
+  for (let y = 8; y < 24; y++) for (let x = 8; x < 40; x++) {
+    if ((x + y) % 3 === 0) state.cells.set(BoardState.key(x, y), (x * 7 + y * 13) % 16);
+  }
 }
 
 async function fullLoad() {
