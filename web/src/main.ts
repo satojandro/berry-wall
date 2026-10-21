@@ -1,5 +1,11 @@
 // App shell: boots the board, wires interaction, sync loop, wallet + draw.
 import "./style.css";
+import { Buffer } from "buffer";
+// @near-js borsh-serializes transactions with Node's Buffer API.
+const g = globalThis as unknown as { Buffer?: typeof Buffer };
+if (!g.Buffer) {
+  g.Buffer = Buffer;
+}
 import { PALETTE, formatPaint } from "./protocol";
 import type { DrawInput } from "./protocol";
 import { BoardState } from "./board-state";
@@ -182,10 +188,30 @@ canvas.addEventListener("pointerup", (e) => {
     void placePixel(cell);
   } else {
     selectedCell = cell;
-    setStatus(`selected (${cell.x}, ${cell.y}) — tap again to paint`);
+    const owner = state.ownerAt(cell.x, cell.y);
+    setStatus(
+      `selected (${cell.x}, ${cell.y})${owner ? ` by ${owner}` : " — empty"} — tap again or press Paint`,
+    );
+    updatePaintButton();
     renderer.requestRender();
   }
 });
+
+// Explicit Paint button — tap-select then Paint (same as double-tap).
+const paintBtn = document.createElement("button");
+paintBtn.id = "paint-btn";
+paintBtn.textContent = "Paint";
+paintBtn.style.marginLeft = "auto";
+paintBtn.disabled = true;
+paintBtn.addEventListener("click", () => {
+  if (selectedCell) void placePixel(selectedCell);
+});
+document.getElementById("palette")!.appendChild(paintBtn);
+
+function updatePaintButton() {
+  paintBtn.disabled = !selectedCell || !account;
+  paintBtn.title = account ? "Paint the selected cell" : "Sign in to paint";
+}
 canvas.addEventListener(
   "wheel",
   (e) => {
@@ -261,6 +287,7 @@ loginBtn.addEventListener("click", async () => {
   try {
     account = await connectWallet(NETWORK);
     loginBtn.textContent = "Sign out";
+    updatePaintButton();
     if (client && account) {
       const v = await client.getAccount(account);
       acctEl.textContent = `paint: ${formatPaint(v.paint_balance)} · pixels: ${v.pixels_owned}`;
