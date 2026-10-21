@@ -78,13 +78,56 @@ export class BoardRenderer {
       this.canvas.height = h;
     }
     const ctx = this.ctx;
-    ctx.fillStyle = palette[0];
-    ctx.fillRect(0, 0, w, h);
     const s = this.camera.scale * dpr;
     const x0 = Math.max(0, Math.floor(this.camera.cx));
     const y0 = Math.max(0, Math.floor(this.camera.cy));
     const x1 = Math.min(size, Math.ceil(this.camera.cx + w / s + 1));
     const y1 = Math.min(size, Math.ceil(this.camera.cy + h / s + 1));
+    // Dark page background outside the board so edges are always visible.
+    ctx.fillStyle = "#0e0f13";
+    ctx.fillRect(0, 0, w, h);
+    // Board surface (white) drawn as an explicit rectangle = visible edges.
+    const boardPx = size * s;
+    const boardX = -this.camera.cx * s;
+    const boardY = -this.camera.cy * s;
+    ctx.fillStyle = palette[0];
+    ctx.fillRect(boardX, boardY, boardPx, boardPx);
+    // Subtle chunk grid (64-cell chunks) so orientation is never lost.
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    const chunkCells = 64;
+    for (let gx = 0; gx <= size; gx += chunkCells) {
+      const px = Math.floor(boardX + gx * s) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(px, boardY);
+      ctx.lineTo(px, boardY + boardPx);
+      ctx.stroke();
+      const py = Math.floor(boardY + gx * s) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(boardX, py);
+      ctx.lineTo(boardX + boardPx, py);
+      ctx.stroke();
+    }
+    // Fine cell grid only when zoomed in enough to be useful.
+    if (s >= 14) {
+      ctx.strokeStyle = "rgba(0,0,0,0.05)";
+      for (let gx = x0; gx <= x1; gx++) {
+        const px = Math.floor(boardX + (gx - this.camera.cx) * s) + 0.5;
+        if (px < boardX || px > boardX + boardPx) continue;
+        ctx.beginPath();
+        ctx.moveTo(px, Math.max(boardY, 0));
+        ctx.lineTo(px, Math.min(boardY + boardPx, h));
+        ctx.stroke();
+      }
+      for (let gy = y0; gy <= y1; gy++) {
+        const py = Math.floor(boardY + (gy - this.camera.cy) * s) + 0.5;
+        if (py < boardY || py > boardY + boardPx) continue;
+        ctx.beginPath();
+        ctx.moveTo(Math.max(boardX, 0), py);
+        ctx.lineTo(Math.min(boardX + boardPx, w), py);
+        ctx.stroke();
+      }
+    }
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
         const c = colorAt(x, y);
