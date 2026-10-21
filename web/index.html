@@ -4,6 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Berry Wall — paint together, farm together</title>
+  <script>
+    // crypto.randomUUID only exists in secure contexts (https / localhost).
+    // This app is served over plain HTTP on the tailnet, and wallet SDKs
+    // (Meteor etc.) call it directly — polyfill it for insecure origins.
+    if (!window.crypto || typeof window.crypto.randomUUID !== "function") {
+      window.crypto.randomUUID = function () {
+        const b = new Uint8Array(16);
+        (window.crypto || window.msCrypto).getRandomValues(b);
+        b[6] = (b[6] & 0x0f) | 0x40;
+        b[8] = (b[8] & 0x3f) | 0x80;
+        const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+        return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+      };
+    }
+  </script>
 </head>
 <body>
   <header>
